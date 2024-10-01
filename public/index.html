@@ -1,0 +1,251 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Catalog</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .product {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .product img {
+            max-width: 150px;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .product h2 {
+            margin: 0 0 10px 0;
+        }
+        .product p {
+            margin: 0 0 5px 0;
+        }
+        .price {
+            font-weight: bold;
+            color: #333;
+        }
+        .admin-button {
+            margin: 20px 0;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .admin-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Product Catalog</h1>
+        <button class="admin-button" onclick="location.href='login.html'">Login to admin panel</button>
+        <div id="productsContainer">
+            Loading products...
+        </div>
+    </div>
+
+    <script>
+        // Load products from the server and display them
+        document.addEventListener('DOMContentLoaded', function () {
+            fetch('http://localhost:5000/products')
+                .then(response => response.json())
+                .then(products => {
+                    const productsContainer = document.getElementById('productsContainer');
+                    
+                    if (products.length === 0) {
+                        productsContainer.innerHTML = 'There are no products available';
+                    } else {
+                        productsContainer.innerHTML = products.map(product => `
+                            <div class="product">
+                                ${product.image_url ? `<img src="${product.image_url}" alt="${product.name}">` : ''}
+                                <h2>${product.name}</h2>
+                                <p>${product.description}</p>
+                                <p class="price">Price: $${product.price}</p>
+                            </div>
+                        `).join('');
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('productsContainer').innerHTML = 'Error loading products';
+                    console.error('Error loading:', error);
+                });
+        });
+    </script>
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Catalog</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .product {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .product img {
+            max-width: 150px;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .product h2 {
+            margin: 0 0 10px 0;
+        }
+        .product p {
+            margin: 0 0 5px 0;
+        }
+        .price {
+            font-weight: bold;
+            color: #333;
+        }
+        .admin-button {
+            margin: 20px 0;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .admin-button:hover {
+            background-color: #0056b3;
+        }
+        .contact-form {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .contact-form input,
+        .contact-form textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .contact-form button {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .contact-form button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Product Catalog</h1>
+        
+        <div id="productsContainer">
+            Loading products...
+        </div>
+
+        <!-- Contact Form -->
+        <div class="contact-form">
+            <h2>Contact Us</h2>
+            <form id="contactForm">
+                <input type="text" id="contactName" placeholder="Your Name" required>
+                <input type="email" id="contactEmail" placeholder="Your Email" required>
+                <textarea id="contactMessage" placeholder="Your Message" required></textarea>
+                <button type="submit">Send Message</button>
+            </form>
+            <p id="contactStatus"></p>
+        </div>
+    </div>
+
+    <script>
+        // Load products from the server and display them
+        document.addEventListener('DOMContentLoaded', function () {
+            fetch('http://localhost:5000/products')
+                .then(response => response.json())
+                .then(products => {
+                    const productsContainer = document.getElementById('productsContainer');
+                    
+                    if (products.length === 0) {
+                        productsContainer.innerHTML = 'There are no products available';
+                    } else {
+                        productsContainer.innerHTML = products.map(product => `
+                            <div class="product">
+                                ${product.image_url ? `<img src="${product.image_url}" alt="${product.name}">` : ''}
+                                <h2>${product.name}</h2>
+                                <p>${product.description}</p>
+                                <p class="price">Price: $${product.price}</p>
+                            </div>
+                        `).join('');
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('productsContainer').innerHTML = 'Error loading products';
+                    console.error('Error loading:', error);
+                });
+
+            // Handle contact form submission
+            document.getElementById('contactForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const name = document.getElementById('contactName').value;
+                const email = document.getElementById('contactEmail').value;
+                const message = document.getElementById('contactMessage').value;
+
+                fetch('http://localhost:5000/contact', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, email, message })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('contactStatus').innerText = data.message;
+                    document.getElementById('contactForm').reset();
+                })
+                .catch(error => {
+                    document.getElementById('contactStatus').innerText = 'Error sending message';
+                    console.error('Error sending message:', error);
+                });
+            });
+        });
+    </script>
+    <button class="admin-button" onclick="location.href='login.html'">Login to admin panel</button>
+</body>
+</html>
+

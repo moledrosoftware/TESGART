@@ -1,35 +1,35 @@
 const express = require('express');
 const { Pool } = require('pg');
-const nodemailer = require('nodemailer');
-const dotenv = require('dotenv');
-const path = require('path');
 const multer = require('multer');
 const cors = require('cors');
-const basicAuth = require('express-basic-auth');
-
-dotenv.config();
-
+const session = require('express-session');
+const path = require('path');
 const app = express();
+const nodemailer = require('nodemailer');
+
+require('dotenv').config();
+
 app.use(express.json());
 app.use(cors());
 
-// Storage configuration for uploaded images
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
-});
+const corsOptions = {
+    origin: 'http://localhost:3000', 
+    credentials: true,
+    optionsSuccessStatus: 200 
+};
 
-const upload = multer({ storage });
+app.use(cors(corsOptions));
 
-// Static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(session({
+    secret: 'TeSgArT-SeCrEt',
+    resave: false,
+    saveUninitialized: false
+}));
+
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Database connection
+
 const pool = new Pool({
     user: process.env.DB_USER,
     host: process.env.DB_HOST,
@@ -38,62 +38,61 @@ const pool = new Pool({
     port: process.env.DB_PORT,
 });
 
-// Test database connection
 const testDbConnection = async () => {
     try {
         const client = await pool.connect();
-        console.log('Successful connection to the database');
         client.release();
+        console.log('Connected to database');
     } catch (err) {
         console.error('Error connecting to database:', err);
     }
 };
-
 testDbConnection();
 
-// Disable caching
-app.use((req, res, next) => {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    next();
-});
-
-// Basic authentication for admin panel
-const adminUsers = {};
-adminUsers[process.env.ADMIN_USER] = process.env.ADMIN_PASSWORD;
-
-app.use('/admin', basicAuth({
-    users: adminUsers,
-    challenge: true,
-    unauthorizedResponse: 'Unauthorized access',
-}));
-
-// Routes
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
-
-// Retrieve messages
-app.get('/messages', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM messages ORDER BY date DESC');
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: 'Error receiving messages' });
+const transporter = nodemailer.createTransport({
+    service: 'gmail', 
+    auth: {
+        user: process.env.EMAIL,
+        pass: process.env.PASSWORD 
     }
 });
 
-// Retrieve products
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'public/uploads/');
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + path.extname(file.originalname));
+    }
+});
+const upload = multer({ storage });
+
+app.get('/admin', (req, res) => {
+    if (req.session.loggedIn) {
+        res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+    } else {
+        res.sendFile(path.join(__dirname, 'public', 'login.html'));
+    }
+});
+
+app.post('/login', (req, res) => {
+    const { username, password } = req.body;
+    
+    if (username === 'admin' && password === 'secret') {  
+        req.session.loggedIn = true;  
+        res.status(200).json({ message: 'Login successful' });
+    } else {
+        res.status(401).json({ message: 'Unauthorized' });
+    }
+});
+
+
+
 app.get('/products', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM products');
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'There are no products yet' });
+            return res.status(404).json({ error: 'No products found' });
         }
         res.json(result.rows);
     } catch (err) {
@@ -102,13 +101,17 @@ app.get('/products', async (req, res) => {
 });
 
 app.post('/products', upload.single('image'), async (req, res) => {
-    const { name, description, price } = req.body;
+    const { name, description } = req.body;
     const image_url = req.file ? `/uploads/${req.file.filename}` : null;
+
+    if (!image_url) {
+        return res.status(400).json({ error: 'Image is required' });
+    }
 
     try {
         const result = await pool.query(
-            'INSERT INTO products (name, description, price, image_url) VALUES ($1, $2, $3, $4) RETURNING *',
-            [name, description, price, image_url]
+            'INSERT INTO products (name, description, image_url) VALUES ($1, $2, $3) RETURNING *',
+            [name, description, image_url]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -117,32 +120,24 @@ app.post('/products', upload.single('image'), async (req, res) => {
     }
 });
 
-
 app.put('/products/:id', upload.single('image'), async (req, res) => {
     const { id } = req.params;
-    const { name, description, price } = req.body;
-
-    // Checking if a new image has been uploaded
+    const { name, description } = req.body;
     const image_url = req.file ? `/uploads/${req.file.filename}` : null;
 
     try {
-        // Get the current image and product data
         const currentProductResult = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
         if (currentProductResult.rowCount === 0) {
             return res.status(404).json({ error: 'Product not found' });
         }
 
         const currentProduct = currentProductResult.rows[0];
-        const currentImageUrl = currentProduct.image_url;
-
-    
         const updatedName = name || currentProduct.name;
         const updatedDescription = description || currentProduct.description;
-        const updatedPrice = price || currentProduct.price; 
 
         const result = await pool.query(
-            'UPDATE products SET name = $1, description = $2, price = $3, image_url = COALESCE($4, $5) WHERE id = $6 RETURNING *',
-            [updatedName, updatedDescription, updatedPrice, image_url, currentImageUrl, id]
+            'UPDATE products SET name = $1, description = $2, image_url = COALESCE($3, image_url) WHERE id = $4 RETURNING *',
+            [updatedName, updatedDescription, image_url, id]
         );
 
         res.json(result.rows[0]);
@@ -152,9 +147,6 @@ app.put('/products/:id', upload.single('image'), async (req, res) => {
     }
 });
 
-
-
-// Delete product
 app.delete('/products/:id', async (req, res) => {
     const { id } = req.params;
     try {
@@ -169,32 +161,26 @@ app.delete('/products/:id', async (req, res) => {
     }
 });
 
-app.get('/login', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
-
-
-
-// Route for login
-app.post('/login', (req, res) => {
-    const { username, password } = req.body;
-
-    // Checking for user existence
-    if (adminUsers[username] && adminUsers[username] === password) {
-        
-        res.status(200).send('Successful login');
-    } else {
-        res.status(401).send('Incorrect username or password');
+app.get('/messages', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM messages ORDER BY date DESC');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Error receiving messages' });
     }
 });
 
-// Nodemailer setup for sending emails
-const transporter = nodemailer.createTransport({
-    service: 'gmail', // или другой SMTP-сервис
-    auth: {
-        user: process.env.EMAIL, // Почта компании
-        pass: process.env.PASSWORD // Пароль приложения для почты компании
+app.delete('/messages/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('DELETE FROM messages WHERE id = $1 RETURNING *', [id]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Message not found' });
+        }
+        res.status(204).end();
+    } catch (err) {
+        console.error('Error deleting message:', err);
+        res.status(500).json({ error: 'Error deleting message' });
     }
 });
 
@@ -207,8 +193,8 @@ app.post('/contact', async (req, res) => {
     }
 
     const mailOptions = {
-        from: email, // Отправитель
-        to: process.env.EMAIL, // Электронная почта компании
+        from: email, 
+        to: process.env.EMAIL, 
         subject: `New message from ${name}`,
         text: `
             Name: ${name}
@@ -218,10 +204,8 @@ app.post('/contact', async (req, res) => {
     };
 
     try {
-        // Отправка письма на почту компании
         await transporter.sendMail(mailOptions);
 
-        // Сохранение сообщения в базу данных
         const result = await pool.query(
             'INSERT INTO messages (name, email, message, date) VALUES ($1, $2, $3, NOW()) RETURNING *',
             [name, email, message]
@@ -236,7 +220,6 @@ app.post('/contact', async (req, res) => {
 
 
 
-// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`The server is running on port ${PORT}`);

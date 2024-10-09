@@ -81,7 +81,6 @@
             border-radius: 4px;
             margin-right: 20px; 
         }
-
         .product-info {
             flex-grow: 1; 
             text-align: left; 
@@ -91,7 +90,6 @@
             color: #333;
             margin-bottom: 5px;
         }
-
         .buttons {
             display: flex;
             flex-direction: column;
@@ -121,7 +119,6 @@
         .update-btn:hover {
             background-color: #45a049;
         }
-        /* Modal styles */
         .modal {
             display: none;
             position: fixed;
@@ -161,8 +158,6 @@
             border-radius: 4px;
             font-size: 16px;
         }
-
-        /* Messages Section Styles */
         .messages-container {
             background-color: #fafafa;
             padding: 20px;
@@ -170,13 +165,11 @@
             border-radius: 8px;
             box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
         }
-
         .message-list {
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
-
         .message {
             background-color: #f9f9f9;
             border: 1px solid #ddd;
@@ -184,18 +177,15 @@
             padding: 15px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
-
         .message strong {
             display: block;
             margin-bottom: 10px;
             color: #333;
         }
-
         .message p {
             margin-bottom: 10px;
             color: #555;
         }
-
         .message button {
             background-color: #e74c3c;
             color: white;
@@ -205,25 +195,23 @@
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
-
         .message button:hover {
             background-color: #c0392b;
         }
-
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Admin Panel</h1>
     
-        
+        <button id="logout-button" style="margin-bottom: 20px; background-color: #e74c3c; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Logout</button>
+
         <!-- Add Product Form -->
         <div class="form-container">
             <h2>Add Product</h2>
             <form id="add-product-form" enctype="multipart/form-data">
                 <input type="text" id="product-name" placeholder="Product Name" required>
                 <input type="text" id="product-description" placeholder="Description" required>
-                <input type="number" id="product-price" placeholder="Price" step="0.01" required>
                 <input type="file" id="product-image" required>
                 <button type="submit">Add Product</button>
             </form>
@@ -246,7 +234,6 @@
                 <form id="update-product-form">
                     <input type="text" id="update-product-name" placeholder="New Name">
                     <input type="text" id="update-product-description" placeholder="New Description">
-                    <input type="number" id="update-product-price" placeholder="New Price" step="0.01">
                     <input type="file" id="update-product-image">
                     <button type="submit">Save Changes</button>
                 </form>
@@ -267,12 +254,11 @@
                     
                     productsContainer.innerHTML = products.map(product => `
                         <div class="product">
-                            <img src="${product.image_url || 'https://via.placeholder.com/150'}" alt="${product.name}">
+                            <img src="http://localhost:5000${product.image_url}" alt="${product.name}">
                             <div class="product-info">
                                 <strong>ID:</strong> ${product.id}<br>
                                 <strong>Name:</strong> ${product.name}<br>
                                 <strong>Description:</strong> ${product.description}<br>
-                                <strong>Price:</strong> ${product.price}<br>
                             </div>
                             <div class="buttons">
                                 <button class="delete-btn" onclick="deleteProduct(${product.id})">Delete</button>
@@ -292,12 +278,10 @@
         async function updateProduct() {
             const name = document.getElementById('update-product-name').value;
             const description = document.getElementById('update-product-description').value;
-            const price = document.getElementById('update-product-price').value;
 
             const formData = new FormData();
             if (name) formData.append('name', name);
             if (description) formData.append('description', description);
-            if (price) formData.append('price', price);
 
             const fileInput = document.getElementById('update-product-image');
             if (fileInput.files.length > 0) {
@@ -352,7 +336,6 @@
             const formData = new FormData();
             formData.append('name', document.getElementById('product-name').value);
             formData.append('description', document.getElementById('product-description').value);
-            formData.append('price', document.getElementById('product-price').value);
             formData.append('image', document.getElementById('product-image').files[0]);
 
             try {
@@ -377,7 +360,15 @@
         });
 
         document.getElementById('logout-button').addEventListener('click', () => {
-            window.location.href = 'index.html';
+            fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ logout: true })  
+            }).finally(() => {
+                window.location.href = 'http://localhost:3000';
+            });
         });
 
         document.addEventListener('DOMContentLoaded', fetchProducts);
@@ -420,8 +411,6 @@
                 console.error('Error deleting message:', error);
             }
         }
-
     </script>
-    <button id="logout-button" style="margin-bottom: 20px; background-color: #e74c3c; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Logout</button>
 </body>
 </html>
